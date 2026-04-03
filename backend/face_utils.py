@@ -68,3 +68,41 @@ def decode_embedding(raw_bytes):
     if raw_bytes is None:
         return np.array([], dtype=np.float32)
     return np.frombuffer(raw_bytes, dtype=np.float32)
+
+# ---------------------------------------
+# Compare faces (Euclidean)
+# ---------------------------------------
+def compare_faces(known_bytes, test_img):
+    """
+    known_bytes: bytes from DB (Admin.face_encoding / Voter.face_encoding)
+    test_img   : numpy BGR image (from OpenCV) OR path
+    """
+    known = decode_embedding(known_bytes)
+
+    if known.size == 0:
+        logger.warning("compare_faces: known embedding empty")
+        return False
+
+    try:
+        new_emb = encode_face(test_img)
+    except Exception as e:
+        logger.warning(f"compare_faces: could not encode test image: {e}")
+        return False
+
+    if known.size != new_emb.size:
+        logger.warning(
+            f"compare_faces: embedding size mismatch {known.size} vs {new_emb.size}"
+        )
+        return False
+
+    dist = float(np.linalg.norm(known - new_emb))
+    logger.info(f"[FaceMatch] distance = {dist:.4f}")
+
+    return dist <= SIMILARITY_THRESHOLD
+
+
+# ---------------------------------------
+# Face encoding → SHA256 hash for blockchain
+# ---------------------------------------
+def hash_encoding(emb):
+    return "0x" + hashlib.sha256(emb.tobytes()).hexdigest()
