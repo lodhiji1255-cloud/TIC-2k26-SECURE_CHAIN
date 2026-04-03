@@ -106,3 +106,29 @@ def send_contract_tx(fn, *args, gas=350000):
         return None, reason or "Blockchain error"
     except Exception as e:
         return None, str(e)
+  # ---------------- Auth Decorator ----------------
+def admin_required(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        token = request.headers.get("Authorization")
+        if not token:
+            return jsonify({"error": "Token missing"}), 401
+
+        try:
+            token = token.replace("Bearer ", "").strip()
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            username = payload.get("username")
+
+            with SessionLocal() as db:
+                admin = db.query(Admin).filter_by(username=username).first()
+                if not admin:
+                    return jsonify({"error": "Admin not found"}), 401
+                g.admin = admin  # rarely used, but kept
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expired"}), 401
+        except Exception as e:
+            return jsonify({"error": "Invalid token", "detail": str(e)}), 401
+
+        return f(*args, **kwargs)
+
+    return wrap
