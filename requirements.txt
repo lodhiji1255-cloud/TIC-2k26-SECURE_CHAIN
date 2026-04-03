@@ -9,7 +9,7 @@ eth-utils
 hexbytes
 rlp
 
-# AI / Vision
+# face recognition
 mediapipe==0.10.9
 opencv-python==4.13.0.92
 numpy==2.2.6
