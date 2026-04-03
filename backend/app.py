@@ -42,3 +42,67 @@ def get_bytes(val):
     if isinstance(val, (bytes, bytearray, memoryview)):
         return bytes(val)
     return bytes(val) if val is not None else b""
+
+def save_image_b64(data_url, dest):
+    """
+    data_url: "data:image/jpeg;base64,...." OR pure base64 string
+    return: numpy BGR image
+    """
+    if "," in data_url:
+        _, encoded = data_url.split(",", 1)
+    else:
+        encoded = data_url
+
+    img_bytes = base64.b64decode(encoded)
+    nparr = np.frombuffer(img_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if img is None:
+        raise ValueError("Invalid Base64 image")
+
+    cv2.imwrite(dest, img)
+    return img
+
+
+def safe_delete(path):
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except:
+        pass
+
+
+def send_contract_tx(fn, *args, gas=350000):
+    """
+    Helper to send tx & catch revert messages nicely.
+    Returns (tx_hash_str, error_str)
+    """
+    try:
+        nonce = w3.eth.get_transaction_count(ADMIN_ACCOUNT)
+        tx = fn(*args).build_transaction(
+            {
+                "from": ADMIN_ACCOUNT,
+                "nonce": nonce,
+                "gas": gas,
+                "gasPrice": w3.to_wei("1", "gwei"),
+            }
+        )
+        signed = w3.eth.account.sign_transaction(tx, private_key=ADMIN_PRIVATE_KEY)
+        tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
+        
+        return tx_hash.hex(), None
+    except ValueError as e:
+        err = e.args[0]
+        reason = ""
+        if isinstance(err, dict):
+            # Ganache style
+            reason = (
+                err.get("data", {}).get("reason")
+                or err.get("data", {}).get("message")
+                or err.get("message", "")
+            )
+        else:
+            reason = str(err)
+        return None, reason or "Blockchain error"
+    except Exception as e:
+        return None, str(e)
