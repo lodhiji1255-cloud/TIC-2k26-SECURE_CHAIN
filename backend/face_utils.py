@@ -28,3 +28,43 @@ def _validate_image(img):
         raise ValueError(f"Invalid image shape: {img.shape}")
 
     return True
+
+# ---------------------------------------
+# Extract face encoding (128-D dlib vector)
+# ---------------------------------------
+def encode_face(img_or_path):
+    # Path input
+    if isinstance(img_or_path, str):
+        img = face_recognition.load_image_file(img_or_path)  # RGB
+        if img is None or img.size == 0:
+            raise ValueError("Failed to load image file")
+    else:
+        # numpy → validate
+        _validate_image(img_or_path)
+
+        # convert BGR → RGB
+        try:
+            img = cv2.cvtColor(img_or_path, cv2.COLOR_BGR2RGB)
+        except Exception:
+            raise ValueError("Failed to convert BGR→RGB")
+
+    # Detect face
+    locations = face_recognition.face_locations(img, model="hog")
+    if len(locations) == 0:
+        raise ValueError("No face detected in image")
+
+    # Compute embedding
+    encs = face_recognition.face_encodings(img, known_face_locations=locations)
+    if not encs:
+        raise ValueError("Failed to compute face encoding")
+
+    return encs[0].astype(np.float32)
+
+
+# ---------------------------------------
+# Convert DB bytes → float vector
+# ---------------------------------------
+def decode_embedding(raw_bytes):
+    if raw_bytes is None:
+        return np.array([], dtype=np.float32)
+    return np.frombuffer(raw_bytes, dtype=np.float32)
