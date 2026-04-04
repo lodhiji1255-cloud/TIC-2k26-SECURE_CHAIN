@@ -1,0 +1,8 @@
+# backend/config/secret.py
+JWT_SECRET = "a534db40082c3f36472d5e2311c20f5ae610ab032e4067618d1d3400f4b440f1"
+ADMIN_PRIVATE_KEY = "0x96acff0cbb961afb59c193d12a117c04cc15a52f08aa5866d275b59ac419e85e"
+ADMIN_ACCOUNT = "0x3D51DE446FD4f5a86f7899eb01C5741Ec5f7B589"
+CONTRACT_ADDRESS = "0x3E9Ea2f93e52af07C9052279cF09B618abd1b23D"
+ABI_PATH = r"C:\Users\soura\OneDrive\Desktop\Decentralised voting\contracts\managedelection.json"
+RPC_URL = "http://127.0.0.1:7545"
+
