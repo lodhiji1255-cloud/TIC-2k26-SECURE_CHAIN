@@ -25,7 +25,9 @@
 </style>
 </head>
 
-<body> <div class="strip"></div>
+<body>
+
+<div class="strip"></div>
 <header class="gov-header">
  <div style="display:flex;align-items:center;gap:10px">
    <img class="ashoka" src="logo.jpeg">
@@ -74,6 +76,7 @@
 </div>
 </div>
 
+
 <script>
 let captured=null, stable=0;
 let autoEnabled=false, autoDone=false, enrollTimer=null;
@@ -91,7 +94,7 @@ navigator.mediaDevices.getUserMedia({video:true}).then(s=>{
 });
 
 /* FaceMesh */
-const mesh=new FaceMesh({locateFile:f=>https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}});
+const mesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
 mesh.setOptions({maxNumFaces:1,minDetectionConfidence:0.55,minTrackingConfidence:0.55});
 
 mesh.onResults(r=>{
@@ -132,5 +135,77 @@ document.getElementById("enroll").addEventListener("input",()=>{
    }
  },1000);  // waits 1s after typing stopped
 });
+
+
+/* Auto Capture Countdown */
+function startTimer(){
+ let s=3;
+ countdown.innerText=s; countdown.style.display="flex";
+ let t=setInterval(()=>{
+  s--; countdown.innerText=s;
+  if(s<=0){clearInterval(t);countdown.style.display="none";capture();}
+ },700);
+}
+
+/* Manual Capture */
+document.getElementById("cap").onclick=capture;
+function capture(){
+ const c=document.createElement("canvas");
+ c.width=video.videoWidth;c.height=video.videoHeight;
+ let x=c.getContext("2d");
+ x.translate(c.width,0); x.scale(-1,1);
+ x.drawImage(video,0,0);
+
+ captured=c.toDataURL("image/jpeg",0.9);
+ preview.src=captured;
+ previewBox.style.display="block";
+ msg.style.color="green"; msg.innerText="Face Captured ✔";
+}
+
+/* Load Candidates (Preserve selection) */
+async function load(){
+ let prev=document.querySelector("input[name=cand]:checked");
+ let val=prev?prev.value:null;
+
+ let r=await fetch("/candidates"); let d=await r.json();
+ cList.innerHTML="";
+
+ d.forEach(c=>{
+  cList.innerHTML+=`
+  <label class="candidate">
+     <input type="radio" name="cand" value="${c.id}">
+     <b>${c.name}</b>
+     <span class="badge">${c.votes}</span>
+  </label>`;
+ });
+
+ if(val){
+   let rb=document.querySelector(`input[value='${val}']`);
+   if(rb) rb.checked=true;
+ }
+}
+load(); setInterval(load,3000);
+
+/* Submit Vote */
+document.getElementById("cast").onclick=async()=>{
+ let e=enroll.value.trim();
+ let s=document.querySelector("input[name=cand]:checked");
+
+ if(!e) return msg.innerText="Enter Enrollment Number";
+ if(!captured) return msg.innerText="Capture Face First";
+ if(!s) return msg.innerText="Select a Candidate";
+
+ let fd=new FormData();
+ fd.append("enrollment",e);
+ fd.append("candidate_id",s.value);
+ fd.append("image",captured);
+
+ let r=await fetch("/vote",{method:"POST",body:fd});
+ let d=await r.json();
+
+ msg.style.color= r.ok?"green":"red";
+ msg.innerText= r.ok?"Vote Submitted Successfully ✔":"❌ "+(d.error || "Failed");
+};
+</script>
 </body>
 </html>
