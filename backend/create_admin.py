@@ -65,3 +65,52 @@ else:
     except:
         pass
 
+# ---------------- Detect & Encode face ----------------
+try:
+    img = cv2.imread(capture_path)
+    if img is None:
+        raise Exception("Captured image unreadable")
+
+    # Quick check that at least one face exists
+    locations = face_recognition.face_locations(img[:, :, ::-1], model="hog")
+    if len(locations) == 0:
+        print("❌ No face detected in provided image.")
+        if capture_path == "admin_temp.jpg" and os.path.exists(capture_path):
+            os.remove(capture_path)
+        exit()
+
+    print("✔ Face detected")
+
+    enc = encode_face(img)  # BGR numpy → encode_face converts to RGB internally
+    print("✔ Face encoded")
+except Exception as e:
+    print("❌ Error:", e)
+    if capture_path == "admin_temp.jpg" and os.path.exists(capture_path):
+        os.remove(capture_path)
+    exit()
+
+# ---------------- Store admin in DB ----------------
+try:
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    with SessionLocal() as db:
+        existing = db.query(Admin).filter_by(username=username).first()
+        if existing:
+            print("❌ Username already exists.")
+        else:
+            new_admin = Admin(
+                username=username,
+                password_hash=hashed,
+                face_encoding=enc.tobytes(),
+            )
+            db.add(new_admin)
+            db.commit()
+            print("\n🎉 ADMIN CREATED SUCCESSFULLY!")
+            print(" Username:", username)
+            print(" Face Encoding Stored ✔")
+except Exception as e:
+    print("❌ DB error:", e)
+
+# ---------------- Cleanup ----------------
+if capture_path == "admin_temp.jpg" and os.path.exists(capture_path):
+    os.remove(capture_path)
