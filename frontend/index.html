@@ -73,5 +73,64 @@
 
 </div>
 </div>
+
+<script>
+let captured=null, stable=0;
+let autoEnabled=false, autoDone=false, enrollTimer=null;
+
+const video=document.getElementById("video");
+const camBox=document.getElementById("camBox");
+const countdown=document.getElementById("countdown");
+const preview=document.getElementById("preview");
+const msg=document.getElementById("msg");
+
+/* ---------------- Camera Start ---------------- */
+navigator.mediaDevices.getUserMedia({video:true}).then(s=>{
+ video.srcObject=s;
+ detect();
+});
+
+/* FaceMesh */
+const mesh=new FaceMesh({locateFile:f=>https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}});
+mesh.setOptions({maxNumFaces:1,minDetectionConfidence:0.55,minTrackingConfidence:0.55});
+
+mesh.onResults(r=>{
+ if(r.multiFaceLandmarks.length){
+    stable++;
+    camBox.classList.add("active"); camBox.classList.remove("idle");
+
+    if(stable>25 && autoEnabled && !autoDone && !captured){
+        autoDone=true;
+        startTimer();
+    }
+ }else{
+    stable=0;
+    camBox.classList.remove("active");
+    camBox.classList.add("idle");
+ }
+});
+
+
+async function detect(){
+ const cam=new Camera(video,{onFrame:async()=>await mesh.send({image:video})});
+ cam.start();
+}
+
+/* 🔥 Enrollment stop-typing based activation */
+document.getElementById("enroll").addEventListener("input",()=>{
+ autoEnabled=false;
+ autoDone=false;
+ captured=null;
+ previewBox.style.display="none";
+
+ if(enrollTimer) clearTimeout(enrollTimer);
+
+ enrollTimer=setTimeout(()=>{
+   if(enroll.value.trim()!=""){
+      autoEnabled=true;
+      console.log("✔ Auto capture unlocked");
+   }
+ },1000);  // waits 1s after typing stopped
+});
 </body>
 </html>
