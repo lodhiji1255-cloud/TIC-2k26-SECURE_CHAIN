@@ -49,3 +49,25 @@
 
 </div>
 </div>
+<script>
+async function load(){
+ const res = await fetch("/candidates");
+ const data = await res.json();
+
+ const box = document.getElementById("list");
+ box.innerHTML="";
+
+ data.forEach(c=>{
+   box.innerHTML += `
+     <div class="candidate-item">
+        <span><b>${c.id}. ${c.name}</b></span>
+        <span class="vote-badge">${c.votes} Votes</span>
+     </div>
+   `;
+ });
+}
+load();
+</script>
+
+</body>
+</html>
