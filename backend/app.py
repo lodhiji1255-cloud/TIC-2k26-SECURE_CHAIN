@@ -339,6 +339,11 @@ def vote():
     if not enrollment or not candidate_id or not image_b64:
         return jsonify({"error": "All fields required"}), 400
 
+    # 🔥 LIVENESS CHECK (ADD HERE)
+    liveness = request.form.get("liveness")
+    if liveness != "true":
+        return jsonify({"error": "Liveness failed"}), 403
+
     tmp_path = os.path.join(UPLOAD_FOLDER, f"{enrollment}_vote.jpg")
 
     with SessionLocal() as db:
@@ -369,7 +374,6 @@ def vote():
             safe_delete(tmp_path)
 
             if err:
-                # Special case: already voted
                 if "already voted" in err.lower():
                     return jsonify({"error": "You already voted"}), 400
                 return jsonify({"error": err}), 500
@@ -395,4 +399,4 @@ def candidates_list():
 # ---------------- Run ----------------
 if __name__ == "__main__":
     print("\n Server running at http://127.0.0.1:5000\n")
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)

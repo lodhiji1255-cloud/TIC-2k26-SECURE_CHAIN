@@ -88,6 +88,10 @@ body.admin-page .face-guide.bad{
 <script>
 let captured=null, stable=0, autoReady=true;
 
+// 🔥 LIVENESS VARIABLES
+let blinkDetected=false;
+let eyeClosedFrames=0;
+
 const msg=document.getElementById("msg");
 const video=document.getElementById("video");
 const preview=document.getElementById("previewImg");
@@ -108,7 +112,7 @@ document.getElementById("step1").onclick=async()=>{
 
   if(!res.ok) return msg.innerText=d.error||"Invalid credentials";
 
-  msg.innerText="Credentials Verified ✔ Proceed with Face Verification";
+  msg.innerText="Credentials Verified ✔ Please blink to continue 👀";
   document.getElementById("camBox").style.display="block";
   startCamera();
 };
@@ -125,14 +129,56 @@ async function startCamera(){
   cam.start();
 }
 
-/* Face Detection Visual Feedback */
+/* 🔥 BLINK DETECTION FUNCTION */
+function checkBlink(landmarks){
+    const leftEye=[33,160,158,133,153,144];
+
+    function getEAR(eye){
+        const p=eye.map(i=>landmarks[i]);
+        const A=Math.hypot(p[1].x-p[5].x,p[1].y-p[5].y);
+        const B=Math.hypot(p[2].x-p[4].x,p[2].y-p[4].y);
+        const C=Math.hypot(p[0].x-p[3].x,p[0].y-p[3].y);
+        return (A+B)/(2.0*C);
+    }
+
+    const ear=getEAR(leftEye);
+
+    if(ear < 0.23){   // 🔥 more natural
+        eyeClosedFrames++;
+
+        if(eyeClosedFrames === 1){
+            msg.innerText="👀 Blink detected...";
+        }
+
+    }else{
+        if(eyeClosedFrames > 1){
+            blinkDetected=true;
+            msg.innerText="✅ Liveness verified";
+        }
+        eyeClosedFrames=0;
+    }
+}
+/* 🔥 FACE DETECTION + LIVENESS */
 function onFaceDetect(res){
   if(res.multiFaceLandmarks.length){
+
+      const landmarks=res.multiFaceLandmarks[0];
+
+      // 🔥 CHECK BLINK
+      checkBlink(landmarks);
+
       camBox.classList.add("active");
       camBox.classList.remove("idle");
       stable++;
 
       if(stable>35 && autoReady){
+
+        // ❌ BLOCK if no blink
+        if(!blinkDetected){
+            msg.innerText="Please blink to verify you are real 👀";
+            return;
+        }
+
         autoReady=false;
         runAutoCapture();
       }
@@ -140,11 +186,13 @@ function onFaceDetect(res){
   }else{
       camBox.classList.remove("active");
       camBox.classList.add("idle");
-      stable=0; autoReady=true;
+      stable=0;
+      autoReady=true;
+      blinkDetected=false;
   }
 }
 
-/* Auto Capture Timer */
+/* Auto Capture */
 function runAutoCapture(){
   let s=3;
   countdown.style.display="flex";
@@ -162,7 +210,7 @@ function runAutoCapture(){
 
 document.getElementById("capture").onclick=captureImage;
 
-/* Capture + Flip */
+/* Capture */
 function captureImage(){
   const c=document.createElement("canvas");
   c.width=video.videoWidth; c.height=video.videoHeight;
@@ -179,6 +227,7 @@ function captureImage(){
   loginWithFace();
 }
 
+/* 🔥 FIXED LOGIN RESPONSE */
 async function loginWithFace(){
   const form=new FormData();
   form.append("username",username.value.trim());
@@ -187,15 +236,15 @@ async function loginWithFace(){
   const res=await fetch("/admin/login_face",{method:"POST",body:form});
   const d=await res.json();
 
-  msg.innerText=res.ok?"Login Successful ✔ Redirecting...":"Face Mismatch ❌";
-
   if(res.ok){
+      msg.innerText="Login Successful ✔ Redirecting...";
       localStorage.setItem("admin_token",d.token);
       setTimeout(()=>location.href="/admin-dashboard",700);
+  }else{
+      msg.innerText=d.error || "Server Error ❌";
   }
 }
 </script>
 
 </body>
 </html>
- !!--jjjj--!!

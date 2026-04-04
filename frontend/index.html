@@ -81,6 +81,10 @@
 let captured=null, stable=0;
 let autoEnabled=false, autoDone=false, enrollTimer=null;
 
+// 🔥 LIVENESS VARIABLES
+let blinkDetected=false;
+let eyeClosedFrames=0;
+
 const video=document.getElementById("video");
 const camBox=document.getElementById("camBox");
 const countdown=document.getElementById("countdown");
@@ -97,17 +101,64 @@ navigator.mediaDevices.getUserMedia({video:true}).then(s=>{
 const mesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
 mesh.setOptions({maxNumFaces:1,minDetectionConfidence:0.55,minTrackingConfidence:0.55});
 
+/* 🔥 BLINK DETECTION */
+function checkBlink(landmarks){
+    const leftEye=[33,160,158,133,153,144];
+
+    function getEAR(eye){
+        const p=eye.map(i=>landmarks[i]);
+        const A=Math.hypot(p[1].x-p[5].x,p[1].y-p[5].y);
+        const B=Math.hypot(p[2].x-p[4].x,p[2].y-p[4].y);
+        const C=Math.hypot(p[0].x-p[3].x,p[0].y-p[3].y);
+        return (A+B)/(2.0*C);
+    }
+
+    const ear=getEAR(leftEye);
+
+    if(ear < 0.23){
+        eyeClosedFrames++;
+
+        if(eyeClosedFrames === 1){
+            msg.innerText = "👀 Blink detected...";
+        }
+
+    }else{
+        if(eyeClosedFrames > 1){
+            blinkDetected = true;
+            msg.innerText = "✅ Liveness verified";
+        }
+        eyeClosedFrames = 0;
+    }
+}
+
+/* FACE DETECTION */
 mesh.onResults(r=>{
  if(r.multiFaceLandmarks.length){
+
+    const landmarks=r.multiFaceLandmarks[0];
+
+    // 🔥 ADD THIS (liveness)
+    checkBlink(landmarks);
+
     stable++;
-    camBox.classList.add("active"); camBox.classList.remove("idle");
+    camBox.classList.add("active"); 
+    camBox.classList.remove("idle");
 
     if(stable>25 && autoEnabled && !autoDone && !captured){
+
+        // ❌ BLOCK WITHOUT BLINK
+        if(!blinkDetected){
+            msg.innerText="⚠ Please blink to verify liveness";
+            return;
+        }
+
         autoDone=true;
         startTimer();
     }
+
  }else{
     stable=0;
+    blinkDetected=false;
     camBox.classList.remove("active");
     camBox.classList.add("idle");
  }
@@ -119,11 +170,12 @@ async function detect(){
  cam.start();
 }
 
-/* 🔥 Enrollment stop-typing based activation */
+/* Enrollment input */
 document.getElementById("enroll").addEventListener("input",()=>{
  autoEnabled=false;
  autoDone=false;
  captured=null;
+ blinkDetected=false;   // 🔥 reset liveness
  previewBox.style.display="none";
 
  if(enrollTimer) clearTimeout(enrollTimer);
@@ -131,13 +183,11 @@ document.getElementById("enroll").addEventListener("input",()=>{
  enrollTimer=setTimeout(()=>{
    if(enroll.value.trim()!=""){
       autoEnabled=true;
-      console.log("✔ Auto capture unlocked");
    }
- },1000);  // waits 1s after typing stopped
+ },1000);
 });
 
-
-/* Auto Capture Countdown */
+/* Auto Capture */
 function startTimer(){
  let s=3;
  countdown.innerText=s; countdown.style.display="flex";
@@ -149,6 +199,7 @@ function startTimer(){
 
 /* Manual Capture */
 document.getElementById("cap").onclick=capture;
+
 function capture(){
  const c=document.createElement("canvas");
  c.width=video.videoWidth;c.height=video.videoHeight;
@@ -159,15 +210,18 @@ function capture(){
  captured=c.toDataURL("image/jpeg",0.9);
  preview.src=captured;
  previewBox.style.display="block";
- msg.style.color="green"; msg.innerText="Face Captured ✔";
+
+ msg.style.color="green"; 
+ msg.innerText="Face Captured ✔";
 }
 
-/* Load Candidates (Preserve selection) */
+/* Load Candidates */
 async function load(){
  let prev=document.querySelector("input[name=cand]:checked");
  let val=prev?prev.value:null;
 
- let r=await fetch("/candidates"); let d=await r.json();
+ let r=await fetch("/candidates"); 
+ let d=await r.json();
  cList.innerHTML="";
 
  d.forEach(c=>{
@@ -195,10 +249,18 @@ document.getElementById("cast").onclick=async()=>{
  if(!captured) return msg.innerText="Capture Face First";
  if(!s) return msg.innerText="Select a Candidate";
 
+ // 🔥 LIVENESS CHECK
+ if(!blinkDetected){
+    return msg.innerText="⚠ Blink required for verification";
+ }
+
  let fd=new FormData();
  fd.append("enrollment",e);
  fd.append("candidate_id",s.value);
  fd.append("image",captured);
+
+ // 🔥 SEND TO BACKEND
+ fd.append("liveness", blinkDetected);
 
  let r=await fetch("/vote",{method:"POST",body:fd});
  let d=await r.json();

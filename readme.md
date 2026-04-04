@@ -1,4 +1,3 @@
-Technocrats Innovation Challenge - 2k26
 🗳️ Decentralized Voting System with Facial Authentication
 
 A secure, tamper-proof blockchain-based voting platform that authenticates voters using live facial recognition and permanently records votes on the Ethereum blockchain.

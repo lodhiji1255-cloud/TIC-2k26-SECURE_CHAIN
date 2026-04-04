@@ -29,6 +29,7 @@ def _validate_image(img):
 
     return True
 
+
 # ---------------------------------------
 # Extract face encoding (128-D dlib vector)
 # ---------------------------------------
@@ -68,6 +69,7 @@ def decode_embedding(raw_bytes):
     if raw_bytes is None:
         return np.array([], dtype=np.float32)
     return np.frombuffer(raw_bytes, dtype=np.float32)
+
 
 # ---------------------------------------
 # Compare faces (Euclidean)
