@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cast Vote - Election Portal</title>
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<style>
+.video-wrap{
+ width:260px;height:200px;background:#000;margin-top:10px;border-radius:10px;
+ border:2px solid #777;overflow:hidden;position:relative;transition:.3s;
+}
+.video-wrap.active{border-color:#00c853;box-shadow:0 0 10px #00c853;}
+.video-wrap.idle{border-color:#ff9800;}
+.countdown{
+ position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+ background:#0008;color:#fff;font-size:32px;padding:8px 18px;border-radius:50%;
+ display:none;
+}
+</style>
+</head>
+
+<body>
