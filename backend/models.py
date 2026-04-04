@@ -49,3 +49,15 @@ class Voter(Base):
 
     # Face embedding
     face_encoding = Column(LONGBLOB, nullable=False)
+
+    # ---------------------------------------------------------
+#   CREATE TABLES IF NOT EXISTS
+# ---------------------------------------------------------
+Base.metadata.create_all(engine)
+
+# ---------------------------------------------------------
+#   SESSION FACTORY
+# ---------------------------------------------------------
+SessionLocal = sessionmaker(bind=engine)
+
+print("✅ Database connected & models ready")
