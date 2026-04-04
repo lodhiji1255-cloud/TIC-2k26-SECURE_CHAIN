@@ -112,6 +112,88 @@ document.getElementById("step1").onclick=async()=>{
   document.getElementById("camBox").style.display="block";
   startCamera();
 };
+
+/* FaceMesh Setup */
+const faceMesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
+faceMesh.setOptions({maxNumFaces:1,minDetectionConfidence:0.6,minTrackingConfidence:0.6});
+faceMesh.onResults(onFaceDetect);
+
+async function startCamera(){
+  const stream=await navigator.mediaDevices.getUserMedia({video:true});
+  video.srcObject=stream;
+  const cam=new Camera(video,{onFrame:async()=>await faceMesh.send({image:video})});
+  cam.start();
+}
+
+/* Face Detection Visual Feedback */
+function onFaceDetect(res){
+  if(res.multiFaceLandmarks.length){
+      camBox.classList.add("active");
+      camBox.classList.remove("idle");
+      stable++;
+
+      if(stable>35 && autoReady){
+        autoReady=false;
+        runAutoCapture();
+      }
+
+  }else{
+      camBox.classList.remove("active");
+      camBox.classList.add("idle");
+      stable=0; autoReady=true;
+  }
+}
+
+/* Auto Capture Timer */
+function runAutoCapture(){
+  let s=3;
+  countdown.style.display="flex";
+  countdown.innerText=s;
+
+  let t=setInterval(()=>{
+    s--; countdown.innerText=s;
+    if(s<=0){
+      clearInterval(t);
+      countdown.style.display="none";
+      captureImage();
+    }
+  },700);
+}
+
+document.getElementById("capture").onclick=captureImage;
+
+/* Capture + Flip */
+function captureImage(){
+  const c=document.createElement("canvas");
+  c.width=video.videoWidth; c.height=video.videoHeight;
+  const x=c.getContext("2d");
+
+  x.translate(c.width,0); x.scale(-1,1);
+  x.drawImage(video,0,0);
+
+  captured=c.toDataURL("image/jpeg",0.9);
+  preview.src=captured;
+  previewBox.style.display="block";
+
+  msg.innerText="Verifying face...";
+  loginWithFace();
+}
+
+async function loginWithFace(){
+  const form=new FormData();
+  form.append("username",username.value.trim());
+  form.append("image",captured);
+
+  const res=await fetch("/admin/login_face",{method:"POST",body:form});
+  const d=await res.json();
+
+  msg.innerText=res.ok?"Login Successful ✔ Redirecting...":"Face Mismatch ❌";
+
+  if(res.ok){
+      localStorage.setItem("admin_token",d.token);
+      setTimeout(()=>location.href="/admin-dashboard",700);
+  }
+}
 </script>
 
 </body>
