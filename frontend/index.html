@@ -25,4 +25,53 @@
 </style>
 </head>
 
-<body>
+<body> <div class="strip"></div>
+<header class="gov-header">
+ <div style="display:flex;align-items:center;gap:10px">
+   <img class="ashoka" src="logo.jpeg">
+   <div><b>Vote Rakshak</b><br><small>Decentralised Voting System</small></div>
+ </div>
+ <nav class="top-links">
+   <a href="/">Home</a>
+   <a href="/results">Results</a>
+   <a href="/admin">Admin</a>
+ </nav>
+</header>
+
+<div class="container">
+<div class="card grid">
+
+<!-- LEFT -->
+<div>
+<label class="label">Enrollment Number</label>
+<input id="enroll" class="input" placeholder="Enter enrollment">
+
+<label class="label">Face Verification</label>
+
+<div class="video-wrap idle" id="camBox">
+ <video id="video" autoplay playsinline></video>
+ <div id="countdown" class="countdown">3</div>
+</div>
+
+<button id="cap" class="btn" style="margin-top:10px">Capture</button>
+<button id="cast" class="btn secondary" style="margin-top:10px">Submit Vote</button>
+
+<div id="previewBox" style="display:none;margin-top:10px;text-align:center">
+ <p>Captured Face:</p>
+ <img id="preview" style="width:160px;border-radius:10px;border:2px solid green;">
+</div>
+
+<p id="msg" style="margin-top:10px;color:#d32f2f"></p>
+</div>
+
+<!-- RIGHT -->
+<div>
+<h3>Select Candidate</h3>
+<p style="height:10px"></p>
+<div id="cList"></div>
+</div>
+
+</div>
+</div>
+</body>
+</html>
